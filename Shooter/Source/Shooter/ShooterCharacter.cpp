@@ -64,13 +64,15 @@ float AShooterCharacter::TakeDamage(float DamageAmount,
 	if (IsDead())
 	{
 		// death
-		DetachFromControllerPendingDestroy();
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		AShooterGameModeBase* GameMode = GetWorld()->GetAuthGameMode<AShooterGameModeBase>();
 		if (GameMode)
 		{
 			GameMode->PawnKilled(this);
 		}
+
+		
+		DetachFromControllerPendingDestroy();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
 	return DamageToApply;
@@ -79,6 +81,11 @@ float AShooterCharacter::TakeDamage(float DamageAmount,
 bool AShooterCharacter::IsDead() const
 {
 	return Health <= 0.f;
+}
+
+float AShooterCharacter::GetHealthPercent() const
+{
+	return Health / MaxHealth;
 }
 
 void AShooterCharacter::MoveForward(float AxisValue)
