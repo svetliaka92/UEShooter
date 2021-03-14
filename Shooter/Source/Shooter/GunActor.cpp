@@ -36,6 +36,14 @@ void AGunActor::Tick(float DeltaTime)
 
 void AGunActor::PullTrigger()
 {
+	if (Ammo <= 0)
+	{
+		// empty mag sound
+		return;
+	}
+
+	--Ammo;
+
 	UGameplayStatics::SpawnEmitterAttached(MuzzleFlash, Mesh, TEXT("MuzzleFlashSocket"));
 	UGameplayStatics::SpawnSoundAttached(MuzzleSound, Mesh, TEXT("MuzzleFlashSocket"));
 
@@ -92,4 +100,14 @@ AController* AGunActor::GetOwnerController() const
 		return nullptr;
 
 	return OwnerPawn->GetController();
+}
+
+void AGunActor::SwitchFireMode()
+{
+
+}
+
+void AGunActor::Reload()
+{
+	Ammo = AmmoPerMagazine;
 }

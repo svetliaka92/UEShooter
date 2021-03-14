@@ -41,6 +41,11 @@ public:
 
 	void Shoot();
 
+	void ReloadGun();
+
+	UFUNCTION(BlueprintPure)
+	void UpdateGunUI() const;
+
 private:
 
 	void MoveForward(float AxisValue);
@@ -48,20 +53,48 @@ private:
 	void LookUpRate(float AxisValue);
 	void LookRightRate(float AxisValue);
 
+	template<int32 Index>
+	void SwitchToWeaponTemplate()
+	{
+		SwitchToWeapon(Index);
+	}
+
+	template<int32 NextIndex>
+	void CycleWeaponTemplate()
+	{
+		CycleWeapon(NextIndex);
+	}
+
+	void SwitchToWeapon(int32 WeaponIndex);
+	void CycleWeapon(int32 CycleDirection);
+
 	UPROPERTY(EditAnywhere)
 	float RotationRateUp = 10.0f;
 	UPROPERTY(EditAnywhere)
 	float RotationRateRight = 10.f;
 
+	UPROPERTY(EditAnywhere)
+	bool bCanUseMultipleGuns = false;
+
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AGunActor> GunClass;
 
+	UPROPERTY(EditDefaultsOnly)
+	TArray<TSubclassOf<AGunActor>> GunClasses;
+
 	UPROPERTY()
-	AGunActor* Gun;
+	TArray<AGunActor*> Guns;
+
+	UPROPERTY(VisibleAnywhere)
+	int32 CurrentGunIndex = 0;
 
 	UPROPERTY(EditDefaultsOnly)
 	float MaxHealth = 100.f;
 
 	UPROPERTY(VisibleAnywhere)
-	float Health;
+	float Health = 0.f;
+
+	UPROPERTY(VisibleAnywhere)
+	int32 GunMagazines = 2;
+
 };

@@ -4,9 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "UObject/ObjectMacros.h"
+
 #include "GunActor.generated.h"
 
-
+UENUM(BlueprintType)
+enum EFireMode
+{
+	FM_SingleFire = 0,
+	FM_Burst = 1,
+	FM_FullAuto = 2,
+};
 
 UCLASS()
 class SHOOTER_API AGunActor : public AActor
@@ -21,6 +29,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	void PullTrigger();
+	void Reload();
+	int32 GetAmmoCount();
 
 protected:
 	// Called when the game starts or when spawned
@@ -52,6 +62,13 @@ private:
 	UPROPERTY(EditAnywhere)
 	float Damage = 10.f;
 
+	UPROPERTY(EditDefaultsOnly)
+	int32 AmmoPerMagazine = 30;
+
+	UPROPERTY(EditDefaultsOnly)
+	int32 Ammo = 30;
+
 	bool GunTrace(FHitResult& Hit, FVector& ShotDirection);
 	AController* GetOwnerController() const;
+	void SwitchFireMode();
 };

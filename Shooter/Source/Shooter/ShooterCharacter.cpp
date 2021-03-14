@@ -18,13 +18,41 @@ AShooterCharacter::AShooterCharacter()
 void AShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	Gun = GetWorld()->SpawnActor<AGunActor>(GunClass);
-	GetMesh()->HideBoneByName(TEXT("weapon_r"), EPhysBodyOp::PBO_None);
-	Gun->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, TEXT("WeaponSocket"));
-	Gun->SetOwner(this);
 
 	Health = MaxHealth;
+
+	GetMesh()->HideBoneByName(TEXT("weapon_r"), EPhysBodyOp::PBO_None);
+
+	CurrentGunIndex = 0;
+	if (bCanUseMultipleGuns)
+	{
+		for (int i = 0; i < 3; ++i)
+		{
+			AGunActor* Gun = GetWorld()->SpawnActor<AGunActor>(GunClasses[i]);
+			
+			if (Gun)
+			{
+				Gun->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, TEXT("WeaponSocket"));
+				Gun->SetOwner(this);
+
+				if (i != CurrentGunIndex)
+					Gun->SetActorHiddenInGame(true);
+
+				Guns.Push(Gun);
+			}
+		}
+	}
+	else
+	{
+		AGunActor* Gun = GetWorld()->SpawnActor<AGunActor>(GunClass);
+		if (Gun)
+		{
+			Gun->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepRelativeTransform, TEXT("WeaponSocket"));
+			Gun->SetOwner(this);
+
+			Guns.Push(Gun);
+		}
+	}
 }
 
 // Called every frame
@@ -49,6 +77,15 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction(TEXT("Fire"), IE_Pressed, this, &AShooterCharacter::Shoot);
+
+	PlayerInputComponent->BindAction(TEXT("WeaponChange1"), IE_Pressed, this, &AShooterCharacter::SwitchToWeaponTemplate<1>);
+	PlayerInputComponent->BindAction(TEXT("WeaponChange2"), IE_Pressed, this, &AShooterCharacter::SwitchToWeaponTemplate<2>);
+	PlayerInputComponent->BindAction(TEXT("WeaponChange3"), IE_Pressed, this, &AShooterCharacter::SwitchToWeaponTemplate<3>);
+
+	PlayerInputComponent->BindAction(TEXT("WeaponCycleNext"), IE_Pressed, this, &AShooterCharacter::CycleWeaponTemplate<1>);
+	PlayerInputComponent->BindAction(TEXT("WeaponCycleBack"), IE_Pressed, this, &AShooterCharacter::CycleWeaponTemplate<-1>);
+
+	PlayerInputComponent->BindAction(TEXT("ReloadGun"), IE_Pressed, this, &AShooterCharacter::ReloadGun);
 }
 
 float AShooterCharacter::TakeDamage(float DamageAmount,
@@ -59,7 +96,6 @@ float AShooterCharacter::TakeDamage(float DamageAmount,
 	float DamageToApply = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
 	Health = FMath::Max(Health - DamageToApply, 0.f);
-	UE_LOG(LogTemp, Warning, TEXT("Current health: %f"), Health);
 
 	if (IsDead())
 	{
@@ -110,8 +146,49 @@ void AShooterCharacter::LookRightRate(float AxisValue)
 
 void AShooterCharacter::Shoot()
 {
-	if (Gun)
+	if (Guns[CurrentGunIndex])
 	{
-		Gun->PullTrigger();
+		Guns[CurrentGunIndex]->PullTrigger();
+
+		UpdateGunUI();
+	}
+}
+
+void AShooterCharacter::SwitchToWeapon(int32 WeaponIndex)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("Picked weapon is: %i"), WeaponIndex);
+
+	// 1 for single-fire, 2 for full auto, 3 for launcher
+	if (WeaponIndex > 0 && WeaponIndex < 4)
+	{
+		int32 Index = WeaponIndex - 1;
+		Guns[CurrentGunIndex]->SetActorHiddenInGame(true);
+		Guns[Index]->SetActorHiddenInGame(false);
+		CurrentGunIndex = Index;
+
+		UpdateGunUI();
+	}
+}
+
+void AShooterCharacter::CycleWeapon(int32 CycleDirection)
+{
+	int32 Index = (CurrentGunIndex + CycleDirection);
+	if (Index >= 3)
+		Index = 0;
+	else if (Index < 0)
+		Index = 2;
+	//UE_LOG(LogTemp, Warning, TEXT("New weapon index: %i"), Index);
+	SwitchToWeapon(Index + 1);
+}
+
+void AShooterCharacter::ReloadGun()
+{
+	if (GunMagazines > 0)
+	{
+		--GunMagazines;
+
+		Guns[CurrentGunIndex]->Reload();
+
+		UpdateGunUI();
 	}
 }
