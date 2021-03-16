@@ -77,6 +77,7 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction(TEXT("Fire"), IE_Pressed, this, &AShooterCharacter::Shoot);
+	PlayerInputComponent->BindAction(TEXT("Fire"), IE_Released, this, &AShooterCharacter::StopShooting);
 
 	PlayerInputComponent->BindAction(TEXT("WeaponChange1"), IE_Pressed, this, &AShooterCharacter::SwitchToWeaponTemplate<1>);
 	PlayerInputComponent->BindAction(TEXT("WeaponChange2"), IE_Pressed, this, &AShooterCharacter::SwitchToWeaponTemplate<2>);
@@ -86,6 +87,7 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAction(TEXT("WeaponCycleBack"), IE_Pressed, this, &AShooterCharacter::CycleWeaponTemplate<-1>);
 
 	PlayerInputComponent->BindAction(TEXT("ReloadGun"), IE_Pressed, this, &AShooterCharacter::ReloadGun);
+	PlayerInputComponent->BindAction(TEXT("Switch Fire Mode"), IE_Pressed, this, &AShooterCharacter::SwitchWeaponFireMode);
 }
 
 float AShooterCharacter::TakeDamage(float DamageAmount,
@@ -124,6 +126,32 @@ float AShooterCharacter::GetHealthPercent() const
 	return Health / MaxHealth;
 }
 
+int32 AShooterCharacter::GetGunAmmo() const
+{
+	if (Guns[CurrentGunIndex])
+		return Guns[CurrentGunIndex]->GetAmmoCount();
+
+	return 0;
+}
+
+FString AShooterCharacter::GetCurrentGun() const
+{
+	if (Guns[CurrentGunIndex])
+		return Guns[CurrentGunIndex]->GetDisplayName();
+
+	return TEXT("");
+}
+
+int32 AShooterCharacter::GetMagazinesNumber() const
+{
+	return GunMagazines;
+}
+
+void AShooterCharacter::AddMagazines(int32 MagazinesToAdd)
+{
+	GunMagazines += MagazinesToAdd;
+}
+
 void AShooterCharacter::MoveForward(float AxisValue)
 {
 	AddMovementInput(GetActorForwardVector() * AxisValue);
@@ -149,9 +177,13 @@ void AShooterCharacter::Shoot()
 	if (Guns[CurrentGunIndex])
 	{
 		Guns[CurrentGunIndex]->PullTrigger();
-
-		UpdateGunUI();
 	}
+}
+
+void AShooterCharacter::StopShooting()
+{
+	if (Guns[CurrentGunIndex])
+		Guns[CurrentGunIndex]->ReleaseTrigger();
 }
 
 void AShooterCharacter::SwitchToWeapon(int32 WeaponIndex)
@@ -165,8 +197,6 @@ void AShooterCharacter::SwitchToWeapon(int32 WeaponIndex)
 		Guns[CurrentGunIndex]->SetActorHiddenInGame(true);
 		Guns[Index]->SetActorHiddenInGame(false);
 		CurrentGunIndex = Index;
-
-		UpdateGunUI();
 	}
 }
 
@@ -181,6 +211,12 @@ void AShooterCharacter::CycleWeapon(int32 CycleDirection)
 	SwitchToWeapon(Index + 1);
 }
 
+void AShooterCharacter::SwitchWeaponFireMode()
+{
+	if (Guns[CurrentGunIndex])
+		Guns[CurrentGunIndex]->SwitchFireMode();
+}
+
 void AShooterCharacter::ReloadGun()
 {
 	if (GunMagazines > 0)
@@ -188,7 +224,5 @@ void AShooterCharacter::ReloadGun()
 		--GunMagazines;
 
 		Guns[CurrentGunIndex]->Reload();
-
-		UpdateGunUI();
 	}
 }

@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
+#include "TimerManager.h"
 
 // Sets default values
 AGunActor::AGunActor()
@@ -25,6 +26,7 @@ void AGunActor::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	CurrentFireMode = DefaultFireMode;
 }
 
 // Called every frame
@@ -34,7 +36,7 @@ void AGunActor::Tick(float DeltaTime)
 
 }
 
-void AGunActor::PullTrigger()
+void AGunActor::Fire()
 {
 	if (Ammo <= 0)
 	{
@@ -66,6 +68,58 @@ void AGunActor::PullTrigger()
 			HitActor->TakeDamage(Damage, DamageEvent, OwnerController, this);
 		}
 	}
+}
+
+void AGunActor::BurstFire()
+{
+	Fire();
+
+	++BurstFires;
+	if (BurstFires >= BurstFireShots)
+	{
+		StopBurstFire();
+		return;
+	}
+}
+
+void AGunActor::StopBurstFire()
+{
+	if (GetWorldTimerManager().IsTimerActive(BurstFireTimer))
+		GetWorldTimerManager().ClearTimer(BurstFireTimer);
+
+	bIsBurstFiring = false;
+}
+
+void AGunActor::PullTrigger()
+{
+	if (CurrentFireMode == EFireMode::FM_SingleFire)
+	{
+		Fire();
+	}
+	else if (CurrentFireMode == EFireMode::FM_FullAuto)
+	{
+		Fire();
+
+		float FireRate = 1.f / ShotsPerSecond;
+		GetWorldTimerManager().SetTimer(FireTimer, this, &AGunActor::Fire, FireRate, true, FireRate);
+	}
+	else if (CurrentFireMode == EFireMode::FM_Burst)
+	{
+		if (bIsBurstFiring)
+			return;
+
+		bIsBurstFiring = true;
+		BurstFires = 0;
+		float FireRate = 0.15f;
+
+		GetWorldTimerManager().SetTimer(BurstFireTimer, this, &AGunActor::BurstFire, FireRate, true, FireRate);
+	}
+}
+
+void AGunActor::ReleaseTrigger()
+{
+	if (GetWorldTimerManager().IsTimerActive(FireTimer))
+		GetWorldTimerManager().ClearTimer(FireTimer);
 }
 
 bool AGunActor::GunTrace(FHitResult& Hit, FVector& ShotDirection)
@@ -104,10 +158,26 @@ AController* AGunActor::GetOwnerController() const
 
 void AGunActor::SwitchFireMode()
 {
+	int32 FireModeIndex = CurrentFireModeIndex + 1;
+	if (FireModeIndex >= FireModes.Num())
+		FireModeIndex = 0;
 
+	//UE_LOG(LogTemp, Warning, TEXT("The current fire mode index is: %i"), FireModeIndex);
+	CurrentFireModeIndex = FireModeIndex;
+	CurrentFireMode = FireModes[CurrentFireModeIndex];
 }
 
 void AGunActor::Reload()
 {
 	Ammo = AmmoPerMagazine;
+}
+
+int32 AGunActor::GetAmmoCount() const
+{
+	return Ammo;
+}
+
+FString AGunActor::GetDisplayName() const
+{
+	return DisplayName;
 }

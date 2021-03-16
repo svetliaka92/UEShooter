@@ -39,12 +39,23 @@ public:
 	UFUNCTION(BlueprintPure)
 	float GetHealthPercent() const;
 
+	UFUNCTION(BlueprintPure)
+	int32 GetGunAmmo() const;
+
+	UFUNCTION(BlueprintPure)
+	FString GetCurrentGun() const;
+
+	UFUNCTION(BlueprintPure)
+	int32 GetMagazinesNumber() const;
+
 	void Shoot();
+	void StopShooting();
 
 	void ReloadGun();
 
-	UFUNCTION(BlueprintPure)
-	void UpdateGunUI() const;
+	void SwitchWeaponFireMode();
+
+	void AddMagazines(int32 MagazinesToAdd);
 
 private:
 
